@@ -1,13 +1,17 @@
 package roro.stellar.manager
 
+import android.Manifest
 import android.content.Intent
 import android.content.res.Configuration
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -31,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
@@ -71,6 +76,13 @@ class MainActivity : ComponentActivity() {
 
     private var pendingSourcePackage: String? = null
     private var sourceAuthorizationStarted = false
+    private var notificationPermissionRequested = false
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        startShellBridge()
+    }
 
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
         checkServerStatus()
@@ -140,14 +152,27 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        try {
-            ShellBridgeService.start(this)
-        } catch (error: Throwable) {
-            Toast.makeText(this, "stsh: ${error.message}", Toast.LENGTH_LONG).show()
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED &&
+            !notificationPermissionRequested
+        ) {
+            notificationPermissionRequested = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            startShellBridge()
         }
         checkServerStatus()
         if (Stellar.pingBinder()) {
             appsModel.load(true)
+        }
+    }
+
+    private fun startShellBridge() {
+        try {
+            ShellBridgeService.start(this)
+        } catch (error: Throwable) {
+            Toast.makeText(this, "stsh: ${error.message}", Toast.LENGTH_LONG).show()
         }
     }
 
