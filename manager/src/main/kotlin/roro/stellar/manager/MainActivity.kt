@@ -73,7 +73,6 @@ class MainActivity : ComponentActivity() {
     private var sourceAuthorizationStarted = false
 
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
-        ShellBridgeService.start(this)
         checkServerStatus()
         handlePendingSourceApp()
         try {
@@ -84,7 +83,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private val binderDeadListener = Stellar.OnBinderDeadListener {
-        ShellBridgeService.stop(this)
         checkServerStatus()
     }
 
@@ -94,6 +92,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        ShellBridgeService.start(this)
 
         pendingSourcePackage = savedInstanceState?.getString(STATE_SOURCE_PACKAGE)
         rememberSourceApp()

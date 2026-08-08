@@ -22,11 +22,18 @@ import roro.stellar.manager.compat.BuildUtils.atLeast26
 class ShellBridgeService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val binderReceivedListener = Stellar.OnBinderReceivedListener {
+        enableServerDaemon()
+    }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+        Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
+    }
+
+    private fun enableServerDaemon() {
         serviceScope.launch {
             runCatching {
                 if (!Stellar.isDaemonEnabled()) {
@@ -41,6 +48,7 @@ class ShellBridgeService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        Stellar.removeBinderReceivedListener(binderReceivedListener)
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -83,10 +91,6 @@ class ShellBridgeService : Service() {
                 context,
                 Intent(context, ShellBridgeService::class.java)
             )
-        }
-
-        fun stop(context: Context) {
-            context.stopService(Intent(context, ShellBridgeService::class.java))
         }
     }
 }
