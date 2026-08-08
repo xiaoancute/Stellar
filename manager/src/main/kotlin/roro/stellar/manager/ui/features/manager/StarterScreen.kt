@@ -1083,7 +1083,6 @@ internal class StarterViewModel(
     }
 
     private fun startProcess() {
-        ShellBridgeService.start(context)
         if (isRoot) {
             startRoot()
         } else {
@@ -1094,6 +1093,7 @@ internal class StarterViewModel(
     @SuppressLint("StringFormatInvalid")
     private fun setSuccess() {
         viewModelScope.launch {
+            runCatching { ShellBridgeService.start(context) }
             StellarSettings.setLastLaunchMethod(
                 if (isRoot) StellarSettings.LaunchMethod.ROOT
                 else StellarSettings.LaunchMethod.ADB
