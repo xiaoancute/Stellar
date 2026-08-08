@@ -1,18 +1,25 @@
 #!/system/bin/sh
 
-SOCKET="@roro.stellar.manager.stsh"
+HOST="127.0.0.1"
+PORT="59521"
+TOKEN_FILE="/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token"
 RESPONSE="$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/stsh.XXXXXX")" || exit 1
 trap 'rm -f "$RESPONSE"' EXIT HUP INT TERM
 
-{
-    echo STSH1
-    for argument in "$@"; do
-        printf '%s' "$argument" \
-            | /system/bin/toybox base64 \
-            | /system/bin/toybox tr -d '\n'
+if [ -r "$TOKEN_FILE" ]; then
+    {
+        echo STSH1
+        /system/bin/toybox cat "$TOKEN_FILE"
         echo
-    done
-} | /system/bin/toybox nc -U -W 3600 "$SOCKET" > "$RESPONSE" 2>/dev/null
+        for argument in "$@"; do
+            printf '%s' "$argument" \
+                | /system/bin/toybox base64 \
+                | /system/bin/toybox tr -d '\n'
+            echo
+        done
+    } | /system/bin/toybox nc -w 3 -W 3600 "$HOST" "$PORT" \
+        > "$RESPONSE" 2>/dev/null
+fi
 
 STATUS_LINE="$(/system/bin/toybox head -n 1 "$RESPONSE")"
 case "$STATUS_LINE" in

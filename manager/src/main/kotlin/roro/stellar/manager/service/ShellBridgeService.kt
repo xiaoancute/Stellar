@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import roro.stellar.Stellar
 import roro.stellar.manager.MainActivity
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.BuildUtils.atLeast26
@@ -17,6 +18,9 @@ import roro.stellar.manager.shell.ShellBridgeServer
 class ShellBridgeService : Service() {
 
     private var bridgeServer: ShellBridgeServer? = null
+    private val binderReceivedListener = Stellar.OnBinderReceivedListener {
+        bridgeServer?.publishToken()
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -25,6 +29,7 @@ class ShellBridgeService : Service() {
         bridgeServer = runCatching {
             ShellBridgeServer(this).also { it.start() }
         }.getOrNull()
+        Stellar.addBinderReceivedListenerSticky(binderReceivedListener)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -32,6 +37,7 @@ class ShellBridgeService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        Stellar.removeBinderReceivedListener(binderReceivedListener)
         bridgeServer?.close()
         bridgeServer = null
         super.onDestroy()

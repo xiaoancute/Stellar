@@ -1,20 +1,34 @@
 package roro.stellar.manager.shell
 
 import android.content.Context
-import android.net.LocalServerSocket
-import android.net.LocalSocket
 import android.util.Base64
 import roro.stellar.Stellar
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.security.SecureRandom
 import java.util.concurrent.Executors
 
-class ShellBridgeServer(private val context: Context) : Closeable {
+class ShellBridgeServer(context: Context) : Closeable {
 
     private val executor = Executors.newCachedThreadPool()
-    private val serverSocket = LocalServerSocket(SOCKET_NAME)
+    private val serverSocket = ServerSocket().apply {
+        reuseAddress = true
+        bind(InetSocketAddress(InetAddress.getLoopbackAddress(), PORT))
+    }
+    private val token = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        .getString(TOKEN_KEY, null)
+        ?: generateToken().also {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .putString(TOKEN_KEY, it)
+                .apply()
+        }
 
     fun start() {
         executor.execute {
@@ -29,15 +43,34 @@ class ShellBridgeServer(private val context: Context) : Closeable {
         }
     }
 
-    private fun handle(socket: LocalSocket) {
+    fun publishToken() {
+        executor.execute {
+            runCatching {
+                val command = arrayOf<String?>(
+                    "/system/bin/sh",
+                    "-c",
+                    "mkdir -p '$TERMUX_FILES' && printf '%s' '$token' > '$TOKEN_FILE'"
+                )
+                val process = Stellar.newProcess(command, null, null)
+                process.outputStream.close()
+                process.waitFor()
+                process.destroy()
+            }
+        }
+    }
+
+    private fun handle(socket: Socket) {
         socket.use { client ->
-            val output = client.outputStream
+            val output = client.getOutputStream()
             try {
-                val packages = context.packageManager.getPackagesForUid(client.peerCredentials.uid)
-                    ?.toSet()
-                    .orEmpty()
-                if (TERMUX_PACKAGE !in packages) {
-                    writeResponse(output, 126, "Termux UID required\n".toByteArray())
+                if (!client.inetAddress.isLoopbackAddress) {
+                    writeResponse(output, 126, "Local connection required\n".toByteArray())
+                    return
+                }
+
+                val lines = client.getInputStream().bufferedReader().readLines()
+                if (lines.firstOrNull() != PROTOCOL || lines.getOrNull(1) != token) {
+                    writeResponse(output, 126, "Invalid stsh token\n".toByteArray())
                     return
                 }
 
@@ -46,12 +79,7 @@ class ShellBridgeServer(private val context: Context) : Closeable {
                     return
                 }
 
-                val lines = client.inputStream.bufferedReader().readLines()
-                if (lines.firstOrNull() != PROTOCOL) {
-                    writeResponse(output, 124, "Invalid stsh request\n".toByteArray())
-                    return
-                }
-                val args = lines.drop(1).map {
+                val args = lines.drop(2).map {
                     String(Base64.decode(it, Base64.DEFAULT), Charsets.UTF_8)
                 }
                 val command = arrayOfNulls<String>(args.size + 1)
@@ -102,15 +130,25 @@ class ShellBridgeServer(private val context: Context) : Closeable {
         }
     }
 
+    private fun generateToken(): String {
+        val bytes = ByteArray(32)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
     override fun close() {
         runCatching { serverSocket.close() }
         executor.shutdownNow()
     }
 
     companion object {
-        private const val SOCKET_NAME = "roro.stellar.manager.stsh"
-        private const val TERMUX_PACKAGE = "com.termux"
+        private const val PORT = 59521
+        private const val PREFERENCES = "stsh_bridge"
+        private const val TOKEN_KEY = "token"
         private const val PROTOCOL = "STSH1"
         private const val STATUS_PREFIX = "STSH_STATUS="
+        private const val TERMUX_FILES =
+            "/storage/emulated/0/Android/data/com.termux/files"
+        private const val TOKEN_FILE = "$TERMUX_FILES/.stellar-stsh-token"
     }
 }
