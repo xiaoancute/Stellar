@@ -9,21 +9,41 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import roro.stellar.Stellar
 import roro.stellar.manager.MainActivity
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.BuildUtils.atLeast26
 
 class ShellBridgeService : Service() {
 
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+        serviceScope.launch {
+            runCatching {
+                if (!Stellar.isDaemonEnabled()) {
+                    Stellar.setDaemonEnabled(true)
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
+    }
 
     private fun createNotificationChannel() {
         if (!atLeast26) return
