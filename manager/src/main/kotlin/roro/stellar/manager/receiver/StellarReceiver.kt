@@ -33,8 +33,9 @@ class StellarReceiver : BroadcastReceiver() {
     }
 
     private fun replyWithBinder(context: Context, intent: Intent) {
-        val data = intent.getBundleExtra(EXTRA_DATA) ?: return
-        val callback = data.getBinder(EXTRA_CALLBACK) ?: return
+        val callback = intent.extras?.getBinder(EXTRA_CALLBACK)
+            ?: intent.getBundleExtra(EXTRA_DATA)?.getBinder(EXTRA_CALLBACK)
+            ?: return
         val binder = Stellar.binder
         if (binder != null && binder.pingBinder()) {
             sendReply(callback, binder)
