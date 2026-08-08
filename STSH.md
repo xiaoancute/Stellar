@@ -19,11 +19,9 @@ Install the modified Stellar APK first, start its privileged service, then place
 exported files in the same private Termux directory:
 
 ```sh
-mkdir -p "$PREFIX/lib/stsh"
-cp stsh stsh_stellar.dex "$PREFIX/lib/stsh/"
-chmod 700 "$PREFIX/lib/stsh/stsh"
-chmod 400 "$PREFIX/lib/stsh/stsh_stellar.dex"
-ln -sf "$PREFIX/lib/stsh/stsh" "$PREFIX/bin/stsh"
+cp stsh stsh_stellar.dex "$PREFIX/bin/"
+chmod 700 "$PREFIX/bin/stsh"
+chmod 400 "$PREFIX/bin/stsh_stellar.dex"
 ```
 
 The first invocation asks Stellar to authorize Termux:
