@@ -12,18 +12,30 @@ import androidx.core.content.ContextCompat
 import roro.stellar.manager.MainActivity
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.BuildUtils.atLeast26
+import roro.stellar.manager.shell.ShellBridgeServer
 
 class ShellBridgeService : Service() {
+
+    private var bridgeServer: ShellBridgeServer? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+        bridgeServer = runCatching {
+            ShellBridgeServer(this).also { it.start() }
+        }.getOrNull()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        bridgeServer?.close()
+        bridgeServer = null
+        super.onDestroy()
+    }
 
     private fun createNotificationChannel() {
         if (!atLeast26) return

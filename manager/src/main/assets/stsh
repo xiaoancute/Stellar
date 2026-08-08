@@ -1,5 +1,28 @@
 #!/system/bin/sh
 
+SOCKET="@roro.stellar.manager.stsh"
+RESPONSE="$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/stsh.XXXXXX")" || exit 1
+trap 'rm -f "$RESPONSE"' EXIT HUP INT TERM
+
+{
+    echo STSH1
+    for argument in "$@"; do
+        printf '%s' "$argument" \
+            | /system/bin/toybox base64 \
+            | /system/bin/toybox tr -d '\n'
+        echo
+    done
+} | /system/bin/toybox nc -U -W 3600 "$SOCKET" > "$RESPONSE" 2>/dev/null
+
+STATUS_LINE="$(/system/bin/toybox head -n 1 "$RESPONSE")"
+case "$STATUS_LINE" in
+    STSH_STATUS=*)
+        STATUS="${STATUS_LINE#STSH_STATUS=}"
+        /system/bin/toybox tail -n +2 "$RESPONSE"
+        exit "$STATUS"
+        ;;
+esac
+
 MANAGER_PACKAGE="${STSH_MANAGER_APPLICATION_ID:-roro.stellar.manager}"
 APK="$(/system/bin/pm path "$MANAGER_PACKAGE" 2>/dev/null \
     | /system/bin/sed -n '1s/^package://p')"
