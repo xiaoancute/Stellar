@@ -7,8 +7,8 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
-import androidx.core.app.ContextCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import roro.stellar.manager.MainActivity
 import roro.stellar.manager.R
 import roro.stellar.manager.compat.BuildUtils.atLeast26
