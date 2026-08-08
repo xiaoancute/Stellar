@@ -23,6 +23,7 @@ public final class StellarShellLoader {
 
     private static final String ACTION_REQUEST_BINDER =
             "roro.stellar.intent.action.REQUEST_SHELL_BINDER";
+    private static final long REQUEST_TIMEOUT_MILLIS = 15000;
     private static String[] args;
     private static String callingPackage;
     private static Handler handler;
@@ -128,7 +129,10 @@ public final class StellarShellLoader {
         }
 
         final String packageForMessage = packageName;
-        handler.postDelayed(() -> abort("Request timed out for " + packageForMessage), 10000);
+        handler.postDelayed(
+                () -> abort("Request timed out for " + packageForMessage),
+                REQUEST_TIMEOUT_MILLIS
+        );
         Looper.loop();
     }
 

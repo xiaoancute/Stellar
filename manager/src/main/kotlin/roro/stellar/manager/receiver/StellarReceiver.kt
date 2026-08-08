@@ -3,10 +3,13 @@ package roro.stellar.manager.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import roro.stellar.Stellar
 
 class StellarReceiver : BroadcastReceiver() {
@@ -33,12 +36,32 @@ class StellarReceiver : BroadcastReceiver() {
         val data = intent.getBundleExtra(EXTRA_DATA) ?: return
         val callback = data.getBinder(EXTRA_CALLBACK) ?: return
         val binder = Stellar.binder
-        if (binder == null || !binder.pingBinder()) {
-            sendReply(callback, null)
+        if (binder != null && binder.pingBinder()) {
+            sendReply(callback, binder)
             return
         }
 
-        sendReply(callback, binder)
+        val pending = goAsync()
+        val handler = Handler(Looper.getMainLooper())
+        val completed = AtomicBoolean(false)
+        lateinit var listener: Stellar.OnBinderReceivedListener
+
+        fun complete(replyBinder: IBinder?) {
+            if (!completed.compareAndSet(false, true)) return
+            handler.removeCallbacksAndMessages(null)
+            Stellar.removeBinderReceivedListener(listener)
+            try {
+                sendReply(callback, replyBinder)
+            } finally {
+                pending.finish()
+            }
+        }
+
+        listener = Stellar.OnBinderReceivedListener {
+            complete(Stellar.binder?.takeIf { it.pingBinder() })
+        }
+        Stellar.addBinderReceivedListener(listener, handler)
+        handler.postDelayed({ complete(Stellar.binder?.takeIf { it.pingBinder() }) }, 8_000)
     }
 
     private fun sendReply(callback: IBinder, binder: IBinder?) {
