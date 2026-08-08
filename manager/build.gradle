@@ -148,12 +148,12 @@ configurations.configureEach {
     exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
 
-tasks.named('preDebugBuild').configure {
-    dependsOn(':shell:assembleDebug')
-}
-
-tasks.named('preReleaseBuild').configure {
-    dependsOn(':shell:assembleRelease')
+tasks.configureEach { task ->
+    if (task.name == 'preDebugBuild') {
+        task.dependsOn(':shell:assembleDebug')
+    } else if (task.name == 'preReleaseBuild') {
+        task.dependsOn(':shell:assembleRelease')
+    }
 }
 
 dependencies {
