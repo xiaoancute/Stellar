@@ -44,6 +44,27 @@ jobs:
         sdkmanager "build-tools;36.0.0"
         sdkmanager "platforms;android-36"
         sdkmanager "ndk;29.0.13113456"
+
+    - name: 恢复固定签名配置
+      env:
+        ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      run: |
+        if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+          echo "::error::缺少 Android 固定签名 Secrets"
+          exit 1
+        fi
+
+        mkdir -p "$RUNNER_TEMP/keystore"
+        echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keystore/key.bin"
+        {
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/keystore/key.bin"
+          echo "KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
+          echo "KEYSTORE_ALIAS=$ANDROID_KEY_ALIAS"
+          echo "KEYSTORE_ALIAS_PASSWORD=$ANDROID_KEY_PASSWORD"
+        } > signing.properties
         
     - name: 缓存 Gradle 包
       uses: actions/cache@v4

@@ -62,6 +62,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig hasReleaseSigning ? signingConfigs.sign : signingConfigs.debug
         }
         release {
             signingConfig hasReleaseSigning ? signingConfigs.sign : signingConfigs.debug
