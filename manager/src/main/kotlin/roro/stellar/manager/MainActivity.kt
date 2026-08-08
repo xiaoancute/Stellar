@@ -42,7 +42,6 @@ import roro.stellar.manager.authorization.RequestPermissionActivity
 import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.domain.apps.appsViewModel
-import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.ui.components.AdaptiveLayoutProvider
 import roro.stellar.manager.ui.features.apps.AppsScreen
 import roro.stellar.manager.ui.features.home.HomeScreen
@@ -92,7 +91,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        ShellBridgeService.start(this)
 
         pendingSourcePackage = savedInstanceState?.getString(STATE_SOURCE_PACKAGE)
         rememberSourceApp()

@@ -64,6 +64,7 @@ import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.AppConstants
+import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
@@ -1082,6 +1083,7 @@ internal class StarterViewModel(
     }
 
     private fun startProcess() {
+        ShellBridgeService.start(context)
         if (isRoot) {
             startRoot()
         } else {
