@@ -64,7 +64,6 @@ import roro.stellar.manager.adb.AdbMdns
 import roro.stellar.manager.adb.AdbPairingService
 import roro.stellar.manager.adb.AdbWirelessHelper
 import roro.stellar.manager.AppConstants
-import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.startup.command.Starter
 import roro.stellar.manager.StellarSettings
 import roro.stellar.manager.ui.navigation.components.FixedTopAppBar
@@ -1093,7 +1092,6 @@ internal class StarterViewModel(
     @SuppressLint("StringFormatInvalid")
     private fun setSuccess() {
         viewModelScope.launch {
-            runCatching { ShellBridgeService.start(context) }
             StellarSettings.setLastLaunchMethod(
                 if (isRoot) StellarSettings.LaunchMethod.ROOT
                 else StellarSettings.LaunchMethod.ADB

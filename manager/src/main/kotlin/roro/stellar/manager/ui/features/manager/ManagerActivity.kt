@@ -3,6 +3,7 @@ package roro.stellar.manager.ui.features.manager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
 
@@ -67,6 +69,15 @@ class ManagerActivity : ComponentActivity() {
                     onClose = { finish() }
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            ShellBridgeService.start(this)
+        } catch (error: Throwable) {
+            Toast.makeText(this, "stsh: ${error.message}", Toast.LENGTH_LONG).show()
         }
     }
 }
