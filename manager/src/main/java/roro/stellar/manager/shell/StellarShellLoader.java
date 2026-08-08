@@ -56,6 +56,7 @@ public final class StellarShellLoader {
         Intent intent = new Intent(ACTION_REQUEST_BINDER)
                 .setPackage(managerPackage)
                 .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                 .putExtra("data", data);
         Bundle extras = intent.getExtras();
         if (extras != null) {
@@ -72,7 +73,7 @@ public final class StellarShellLoader {
 
         try {
             activityManager.broadcastIntent(null, intent, null, null, 0, null, null,
-                    null, -1, null, true, false, 0);
+                    null, -1, null, false, false, 0);
         } catch (Throwable error) {
             if ((Build.VERSION.SDK_INT != Build.VERSION_CODES.O
                     && Build.VERSION.SDK_INT != Build.VERSION_CODES.O_MR1)
