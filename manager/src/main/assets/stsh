@@ -1,17 +1,17 @@
 #!/system/bin/sh
 
-DEX_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-DEX="$DEX_DIR/stsh_stellar.dex"
+MANAGER_PACKAGE="${STSH_MANAGER_APPLICATION_ID:-roro.stellar.manager}"
+APK="$(/system/bin/pm path "$MANAGER_PACKAGE" 2>/dev/null \
+    | /system/bin/sed -n '1s/^package://p')"
 
-if [ ! -f "$DEX" ]; then
-    echo "stsh_stellar.dex not found; copy the exported stsh files together" >&2
+if [ -z "$APK" ] || [ ! -r "$APK" ]; then
+    echo "Stellar APK not found for $MANAGER_PACKAGE" >&2
     exit 1
 fi
 
-chmod 400 "$DEX" 2>/dev/null
-export CLASSPATH="$DEX"
+export CLASSPATH="$APK"
 export STSH_APPLICATION_ID="${STSH_APPLICATION_ID:-com.termux}"
 
 exec /system/bin/app_process /system/bin \
     --nice-name=stsh \
-    roro.stellar.shell.StellarShellLoader "$@"
+    roro.stellar.manager.shell.StellarShellLoader "$@"

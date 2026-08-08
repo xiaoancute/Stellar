@@ -10,19 +10,20 @@ Run the `Manager CI` workflow or push to the fork's `main` branch. The
 `manager-debug-apk` artifact contains:
 
 - the modified Stellar manager APK;
-- the `stsh` launcher script;
-- `stsh_stellar.dex`, the terminal-side loader.
+- the `stsh` launcher script.
 
 ## Install in Termux
 
-Install the modified Stellar APK first, start its privileged service, then place both
-exported files in the same private Termux directory:
+Install the modified Stellar APK first, start its privileged service, then place the
+exported script in Termux:
 
 ```sh
-cp stsh stsh_stellar.dex "$PREFIX/bin/"
+cp stsh "$PREFIX/bin/"
 chmod 700 "$PREFIX/bin/stsh"
-chmod 400 "$PREFIX/bin/stsh_stellar.dex"
 ```
+
+The script locates the installed Stellar APK with Android's package manager and loads
+the embedded shell client directly from that read-only APK.
 
 The first invocation asks Stellar to authorize Termux:
 
@@ -38,5 +39,6 @@ stsh exec /system/bin/id
 ```
 
 `STSH_APPLICATION_ID` defaults to `com.termux`. Set it when using a Termux fork with a
-different package name. Set `STSH_PRESERVE_ENV=1` only when the privileged process
-needs the terminal app's environment.
+different package name. `STSH_MANAGER_APPLICATION_ID` overrides the Stellar package
+name. Set `STSH_PRESERVE_ENV=1` only when the privileged process needs the terminal
+app's environment.

@@ -148,14 +148,6 @@ configurations.configureEach {
     exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
 
-tasks.configureEach { task ->
-    if (task.name == 'preDebugBuild') {
-        task.dependsOn(':shell:assembleDebug')
-    } else if (task.name == 'preReleaseBuild') {
-        task.dependsOn(':shell:assembleRelease')
-    }
-}
-
 dependencies {
     implementation managerLibs.bundles.kotlinxCoroutines
 

@@ -7,8 +7,7 @@ import java.io.IOException
 
 object StshExporter {
     private val assets = listOf(
-        ExportedAsset("stsh", "application/x-sh"),
-        ExportedAsset("stsh_stellar.dex", "application/octet-stream")
+        ExportedAsset("stsh", "application/x-sh")
     )
 
     fun export(context: Context, treeUri: Uri) {

@@ -34,18 +34,17 @@ class StellarReceiver : BroadcastReceiver() {
         val callback = data.getBinder(EXTRA_CALLBACK) ?: return
         val binder = Stellar.binder
         if (binder == null || !binder.pingBinder()) {
-            sendReply(callback, null, null)
+            sendReply(callback, null)
             return
         }
 
-        sendReply(callback, binder, context.applicationInfo.sourceDir)
+        sendReply(callback, binder)
     }
 
-    private fun sendReply(callback: IBinder, binder: IBinder?, sourceDir: String?) {
+    private fun sendReply(callback: IBinder, binder: IBinder?) {
         val data = android.os.Parcel.obtain()
         try {
             data.writeStrongBinder(binder)
-            data.writeString(sourceDir)
             callback.transact(1, data, null, IBinder.FLAG_ONEWAY)
         } finally {
             data.recycle()

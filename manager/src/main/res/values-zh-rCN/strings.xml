@@ -375,6 +375,6 @@
     <string name="downloading">下载中</string>
     <string name="download_failed">下载失败: %s</string>
     <string name="stsh_export">导出供终端应用使用的 stsh</string>
-    <string name="stsh_export_success">stsh 与客户端 DEX 已导出</string>
+    <string name="stsh_export_success">stsh 已导出</string>
     <string name="stsh_export_failed">导出 stsh 失败</string>
 </resources>

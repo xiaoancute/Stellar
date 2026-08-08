@@ -44,6 +44,9 @@
 }
 
 -keep class roro.stellar.manager.shell.StellarShell { *; }
+-keep class roro.stellar.manager.shell.StellarShellLoader {
+    public static void main(java.lang.String[]);
+}
 
 # Keep Shizuku AIDL interfaces
 -keep class moe.shizuku.server.** { *; }

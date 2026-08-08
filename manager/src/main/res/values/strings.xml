@@ -376,6 +376,6 @@
     <string name="downloading">Downloading</string>
     <string name="download_failed">Download failed: %s</string>
     <string name="stsh_export">Export stsh for terminal apps</string>
-    <string name="stsh_export_success">stsh and its client DEX were exported</string>
+    <string name="stsh_export_success">stsh was exported</string>
     <string name="stsh_export_failed">Failed to export stsh</string>
 </resources>

@@ -56,7 +56,6 @@ dependencyResolutionManagement {
 if (System.getenv("JITPACK") != "true") {
     include ':manager'
     include ':server'
-    include ':shell'
 }
 def root = "api"
 

@@ -1,4 +1,4 @@
-package roro.stellar.shell;
+package roro.stellar.manager.shell;
 
 import android.app.ActivityManagerNative;
 import android.app.IActivityManager;
@@ -15,19 +15,14 @@ import android.os.ServiceManager;
 import android.system.Os;
 import android.text.TextUtils;
 
-import java.lang.reflect.Method;
 import java.util.Objects;
 
-import dalvik.system.BaseDexClassLoader;
 import rikka.hidden.compat.PackageManagerApis;
 
 public final class StellarShellLoader {
 
     private static final String ACTION_REQUEST_BINDER =
             "roro.stellar.intent.action.REQUEST_SHELL_BINDER";
-    private static final String MANAGER_PACKAGE = "roro.stellar.manager";
-    private static final String SHELL_CLASS = "roro.stellar.manager.shell.StellarShell";
-
     private static String[] args;
     private static String callingPackage;
     private static Handler handler;
@@ -38,9 +33,8 @@ public final class StellarShellLoader {
                 throws RemoteException {
             if (code == 1) {
                 IBinder binder = data.readStrongBinder();
-                String sourceDir = data.readString();
-                if (binder != null && sourceDir != null) {
-                    handler.post(() -> onBinderReceived(binder, sourceDir));
+                if (binder != null) {
+                    handler.post(() -> onBinderReceived(binder));
                 } else {
                     abort("Stellar service is not running");
                 }
@@ -54,8 +48,12 @@ public final class StellarShellLoader {
         Bundle data = new Bundle();
         data.putBinder("binder", receiverBinder);
 
+        String managerPackage = System.getenv("STSH_MANAGER_APPLICATION_ID");
+        if (TextUtils.isEmpty(managerPackage)) {
+            managerPackage = "roro.stellar.manager";
+        }
         Intent intent = new Intent(ACTION_REQUEST_BINDER)
-                .setPackage(MANAGER_PACKAGE)
+                .setPackage(managerPackage)
                 .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
                 .putExtra("data", data);
 
@@ -91,23 +89,9 @@ public final class StellarShellLoader {
         }
     }
 
-    private static void onBinderReceived(IBinder binder, String sourceDir) {
-        try {
-            handler.removeCallbacksAndMessages(null);
-            BaseDexClassLoader classLoader = new BaseDexClassLoader(
-                    sourceDir, null, System.getProperty("java.library.path"),
-                    ClassLoader.getSystemClassLoader());
-            Class<?> shell = classLoader.loadClass(SHELL_CLASS);
-            Method main = shell.getDeclaredMethod("main", String[].class, String.class,
-                    IBinder.class, Handler.class);
-            main.invoke(null, args, callingPackage, binder, handler);
-        } catch (ClassNotFoundException error) {
-            abort("Stellar manager does not contain the stsh shell client");
-        } catch (Throwable error) {
-            error.printStackTrace(System.err);
-            System.err.flush();
-            System.exit(1);
-        }
+    private static void onBinderReceived(IBinder binder) {
+        handler.removeCallbacksAndMessages(null);
+        StellarShell.main(args, callingPackage, binder, handler);
     }
 
     public static void main(String[] arguments) {
