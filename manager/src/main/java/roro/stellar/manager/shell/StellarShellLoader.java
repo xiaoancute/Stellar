@@ -56,8 +56,11 @@ public final class StellarShellLoader {
         Intent intent = new Intent(ACTION_REQUEST_BINDER)
                 .setPackage(managerPackage)
                 .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-                .putExtra("binder", receiverBinder)
                 .putExtra("data", data);
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            extras.putBinder("binder", receiverBinder);
+        }
 
         IBinder activityBinder = ServiceManager.getService("activity");
         IActivityManager activityManager;
