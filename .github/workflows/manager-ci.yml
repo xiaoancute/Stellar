@@ -7,6 +7,7 @@ on:
       - 'manager/**'
       - 'server/**'
       - 'api/**'
+      - 'shell/**'
       - '*.gradle'
   pull_request:
     branches: [ master, main, develop ]
@@ -66,7 +67,10 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: manager-debug-apk
-        path: manager/build/outputs/apk/debug/*.apk
+        path: |
+          manager/build/outputs/apk/debug/*.apk
+          manager/src/main/assets/stsh
+          manager/src/main/assets/stsh_stellar.dex
         retention-days: 7
         
     - name: 上传测试报告
@@ -87,5 +91,4 @@ jobs:
         echo "### 产物（保留 7 天）" >> $GITHUB_STEP_SUMMARY
         echo "- Manager Debug APK" >> $GITHUB_STEP_SUMMARY
         echo "- 测试报告" >> $GITHUB_STEP_SUMMARY
-
 

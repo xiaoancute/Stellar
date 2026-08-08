@@ -1,0 +1,1 @@
+-keep class roro.stellar.shell.StellarShellLoader { public static void main(java.lang.String[]); }

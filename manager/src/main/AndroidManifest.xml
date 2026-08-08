@@ -157,6 +157,7 @@
             tools:ignore="ExportedReceiver">
             <intent-filter>
                 <action android:name="roro.stellar.intent.action.REQUEST_BINDER" />
+                <action android:name="roro.stellar.intent.action.REQUEST_SHELL_BINDER" />
             </intent-filter>
         </receiver>
 

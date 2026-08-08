@@ -147,6 +147,15 @@ tasks.withType(CompileArtProfileTask.class).configureEach {
 configurations.configureEach {
     exclude group: 'androidx.profileinstaller', module: 'profileinstaller'
 }
+
+tasks.named('preDebugBuild').configure {
+    dependsOn(':shell:assembleDebug')
+}
+
+tasks.named('preReleaseBuild').configure {
+    dependsOn(':shell:assembleRelease')
+}
+
 dependencies {
     implementation managerLibs.bundles.kotlinxCoroutines
 

@@ -1,5 +1,8 @@
 package roro.stellar.manager.ui.features.terminal
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -14,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Sync
@@ -21,6 +25,8 @@ import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +51,7 @@ import roro.stellar.manager.ui.navigation.components.createTopAppBarScrollBehavi
 import roro.stellar.manager.ui.theme.AppShape
 import roro.stellar.manager.ui.theme.AppSpacing
 import roro.stellar.manager.shortcut.CommandShortcutManager
+import roro.stellar.manager.shell.StshExporter
 import java.util.UUID
 import roro.stellar.manager.util.Logger.Companion.LOGGER
 
@@ -94,6 +101,21 @@ fun TerminalScreen(
     var editingCommand by remember { mutableStateOf<CommandItem?>(null) }
     var commands by remember { mutableStateOf(emptyList<CommandItem>()) }
     val scope = rememberCoroutineScope()
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            val result = runCatching { StshExporter.export(context, uri) }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    if (result.isSuccess) R.string.stsh_export_success else R.string.stsh_export_failed,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         commands = loadCommands(context)
@@ -108,6 +130,14 @@ fun TerminalScreen(
         topBar = {
             StandardLargeTopAppBar(
                 title = stringResource(R.string.command),
+                actions = {
+                    IconButton(onClick = { exportLauncher.launch(null) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Download,
+                            contentDescription = stringResource(R.string.stsh_export)
+                        )
+                    }
+                },
                 scrollBehavior = scrollBehavior
             )
         },
