@@ -42,6 +42,7 @@ import roro.stellar.manager.authorization.RequestPermissionActivity
 import roro.stellar.manager.domain.apps.AppType
 import roro.stellar.manager.domain.apps.AppsViewModel
 import roro.stellar.manager.domain.apps.appsViewModel
+import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.ui.components.AdaptiveLayoutProvider
 import roro.stellar.manager.ui.features.apps.AppsScreen
 import roro.stellar.manager.ui.features.home.HomeScreen
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
     private var sourceAuthorizationStarted = false
 
     private val binderReceivedListener = Stellar.OnBinderReceivedListener {
+        ShellBridgeService.start(this)
         checkServerStatus()
         handlePendingSourceApp()
         try {
@@ -82,6 +84,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val binderDeadListener = Stellar.OnBinderDeadListener {
+        ShellBridgeService.stop(this)
         checkServerStatus()
     }
 

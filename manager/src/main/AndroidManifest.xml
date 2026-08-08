@@ -119,6 +119,16 @@
             android:exported="false" />
 
         <service
+            android:name=".service.ShellBridgeService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the Stellar Binder available for the stsh terminal bridge" />
+        </service>
+
+        <service
             android:name=".service.StellarAccessibilityService"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
