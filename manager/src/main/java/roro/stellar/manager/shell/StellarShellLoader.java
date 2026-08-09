@@ -2,6 +2,7 @@ package roro.stellar.manager.shell;
 
 import android.app.ActivityManagerNative;
 import android.app.IActivityManager;
+import android.content.IIntentReceiver;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.Build;
@@ -17,6 +18,7 @@ import android.text.TextUtils;
 
 import java.io.File;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import dalvik.system.BaseDexClassLoader;
 import rikka.hidden.compat.PackageManagerApis;
@@ -31,6 +33,7 @@ public final class StellarShellLoader {
     private static String[] args;
     private static String callingPackage;
     private static Handler handler;
+    private static final AtomicBoolean binderReceived = new AtomicBoolean(false);
 
     private static final Binder receiverBinder = new Binder() {
         @Override
@@ -42,16 +45,44 @@ public final class StellarShellLoader {
 
             IBinder binder = data.readStrongBinder();
             String sourceDir = data.readString();
-            if (binder == null || TextUtils.isEmpty(sourceDir)) {
-                abort("Stellar service is not running");
-                return true;
-            }
-
-            handler.removeCallbacksAndMessages(null);
-            handler.post(() -> onBinderReceived(binder, sourceDir));
+            dispatchBinderResult(binder, sourceDir);
             return true;
         }
     };
+
+    private static final IIntentReceiver resultReceiver = new IIntentReceiver.Stub() {
+        @Override
+        public void performReceive(
+                Intent intent,
+                int resultCode,
+                String resultData,
+                Bundle resultExtras,
+                boolean ordered,
+                boolean sticky,
+                int sendingUser
+        ) {
+            IBinder binder = resultExtras == null
+                    ? null
+                    : resultExtras.getBinder("binder");
+            String sourceDir = resultExtras == null
+                    ? null
+                    : resultExtras.getString("sourceDir");
+            dispatchBinderResult(binder, sourceDir);
+        }
+    };
+
+    private static void dispatchBinderResult(IBinder binder, String sourceDir) {
+        if (!binderReceived.compareAndSet(false, true)) {
+            return;
+        }
+        if (binder == null || TextUtils.isEmpty(sourceDir)) {
+            abort("Stellar service is not running");
+            return;
+        }
+
+        handler.removeCallbacksAndMessages(null);
+        handler.post(() -> onBinderReceived(binder, sourceDir));
+    }
 
     private static void requestForBinder() throws RemoteException {
         Bundle data = new Bundle();
@@ -76,7 +107,7 @@ public final class StellarShellLoader {
         }
 
         try {
-            activityManager.broadcastIntent(null, intent, null, null, 0, null, null,
+            activityManager.broadcastIntent(null, intent, null, resultReceiver, 0, null, null,
                     null, -1, null, true, false, 0);
         } catch (Throwable error) {
             if ((Build.VERSION.SDK_INT != Build.VERSION_CODES.O

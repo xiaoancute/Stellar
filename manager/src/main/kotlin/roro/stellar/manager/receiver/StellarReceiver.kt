@@ -35,9 +35,10 @@ class StellarReceiver : BroadcastReceiver() {
     }
 
     private fun replyWithBinder(context: Context, intent: Intent) {
-        val callback = intent.getBundleExtra(EXTRA_DATA)?.getBinder(EXTRA_CALLBACK) ?: return
+        val callback = intent.getBundleExtra(EXTRA_DATA)?.getBinder(EXTRA_CALLBACK)
         val binder = runCatching { requestShizukuBinder() }.getOrNull()
         if (binder != null) {
+            setResultExtras(createResult(context, binder))
             sendReply(context, callback, binder)
             return
         }
@@ -52,6 +53,7 @@ class StellarReceiver : BroadcastReceiver() {
             handler.removeCallbacksAndMessages(null)
             Stellar.removeBinderReceivedListener(listener)
             try {
+                pending.setResultExtras(createResult(context, replyBinder))
                 sendReply(context, callback, replyBinder)
             } finally {
                 pending.finish()
@@ -84,7 +86,14 @@ class StellarReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun sendReply(context: Context, callback: IBinder, binder: IBinder?) {
+    private fun createResult(context: Context, binder: IBinder?): android.os.Bundle =
+        android.os.Bundle().apply {
+            putBinder(EXTRA_CALLBACK, binder)
+            putString(EXTRA_SOURCE_DIR, context.applicationInfo.sourceDir)
+        }
+
+    private fun sendReply(context: Context, callback: IBinder?, binder: IBinder?) {
+        if (callback == null) return
         val data = Parcel.obtain()
         try {
             data.writeStrongBinder(binder)
@@ -100,6 +109,7 @@ class StellarReceiver : BroadcastReceiver() {
             "roro.stellar.intent.action.REQUEST_SHELL_BINDER"
         private const val EXTRA_DATA = "data"
         private const val EXTRA_CALLBACK = "binder"
+        private const val EXTRA_SOURCE_DIR = "sourceDir"
         private const val BINDER_TRANSACTION_GET_SHIZUKU_SERVICE = 405
         private const val BINDER_WAIT_TIMEOUT_MILLIS = 8_000L
     }
