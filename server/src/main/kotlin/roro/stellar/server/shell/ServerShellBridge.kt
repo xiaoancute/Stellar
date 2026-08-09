@@ -19,7 +19,7 @@ class ServerShellBridge : Closeable {
     private val executor = Executors.newCachedThreadPool()
     private val serverSocket = ServerSocket().apply {
         reuseAddress = true
-        bind(InetSocketAddress(InetAddress.getLoopbackAddress(), PORT))
+        bind(InetSocketAddress(InetAddress.getByName(HOST), PORT))
     }
     private val token = generateToken()
 
@@ -56,7 +56,12 @@ class ServerShellBridge : Closeable {
                     return
                 }
 
-                val lines = client.getInputStream().bufferedReader().readLines()
+                val reader = client.getInputStream().bufferedReader()
+                val lines = buildList {
+                    while (true) {
+                        add(reader.readLine() ?: break)
+                    }
+                }
                 if (lines.firstOrNull() != PROTOCOL || lines.getOrNull(1) != token) {
                     writeResponse(output, 126, "Invalid stsh token\n".toByteArray())
                     return
@@ -123,6 +128,7 @@ class ServerShellBridge : Closeable {
 
     companion object {
         private val LOGGER = Logger("ServerShellBridge")
+        private const val HOST = "127.0.0.1"
         private const val PORT = 59521
         private const val PROTOCOL = "STSH1"
         private const val STATUS_PREFIX = "STSH_STATUS="

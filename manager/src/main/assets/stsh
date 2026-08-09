@@ -1,34 +1,53 @@
 #!/system/bin/sh
 
-HOST="127.0.0.1"
-PORT="59521"
 TOKEN_FILE="/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token"
-RESPONSE="$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/stsh.XXXXXX")" || exit 1
-trap 'rm -f "$RESPONSE"' EXIT HUP INT TERM
+PYTHON="${PREFIX:-/data/data/com.termux/files/usr}/bin/python"
 
-if [ -r "$TOKEN_FILE" ]; then
-    {
-        echo STSH1
-        /system/bin/toybox cat "$TOKEN_FILE"
-        echo
-        for argument in "$@"; do
-            printf '%s' "$argument" \
-                | /system/bin/toybox base64 \
-                | /system/bin/toybox tr -d '\n'
-            echo
-        done
-    } | /system/bin/toybox nc -w 2 -W 3600 "$HOST" "$PORT" \
-        > "$RESPONSE" 2>/dev/null
+if [ -x "$PYTHON" ] && [ -r "$TOKEN_FILE" ]; then
+    exec "$PYTHON" - "$@" <<'PY'
+import base64
+import socket
+import sys
+
+TOKEN_FILE = "/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token"
+
+try:
+    with open(TOKEN_FILE, "r", encoding="utf-8") as token_file:
+        token = token_file.read().strip()
+    payload = "\n".join([
+        "STSH1",
+        token,
+        *(base64.b64encode(argument.encode()).decode() for argument in sys.argv[1:]),
+        "",
+    ]).encode()
+
+    with socket.create_connection(("127.0.0.1", 59521), timeout=3) as client:
+        client.settimeout(None)
+        client.sendall(payload)
+        client.shutdown(socket.SHUT_WR)
+        response = bytearray()
+        while True:
+            chunk = client.recv(8192)
+            if not chunk:
+                break
+            response.extend(chunk)
+except Exception as error:
+    print(f"Stellar stsh bridge unavailable: {error}", file=sys.stderr)
+    sys.exit(125)
+
+status_line, separator, body = bytes(response).partition(b"\n")
+if not separator or not status_line.startswith(b"STSH_STATUS="):
+    print("Invalid response from Stellar stsh bridge", file=sys.stderr)
+    sys.exit(125)
+
+sys.stdout.buffer.write(body)
+sys.stdout.buffer.flush()
+try:
+    sys.exit(int(status_line.removeprefix(b"STSH_STATUS=")))
+except ValueError:
+    sys.exit(125)
+PY
 fi
-
-STATUS_LINE="$(/system/bin/toybox head -n 1 "$RESPONSE")"
-case "$STATUS_LINE" in
-    STSH_STATUS=*)
-        STATUS="${STATUS_LINE#STSH_STATUS=}"
-        /system/bin/toybox tail -n +2 "$RESPONSE"
-        exit "$STATUS"
-        ;;
-esac
 
 MANAGER_PACKAGE="${STSH_MANAGER_APPLICATION_ID:-roro.stellar.manager}"
 APK="$(/system/bin/pm path "$MANAGER_PACKAGE" 2>/dev/null \
