@@ -3,10 +3,10 @@
 # Stellar
 一个基于 Shizuku 的深度定制分支，让应用通过 ADB 或 Root 权限使用系统级 API
 
-[![GitHub Stars](https://img.shields.io/github/stars/roro2239/Stellar?style=flat-square&logo=github&logoColor=white&color=181717&cacheSeconds=0)](https://github.com/roro2239/Stellar/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/roro2239/Stellar?style=flat-square&logo=github&logoColor=white&color=181717)](https://github.com/roro2239/Stellar/forks)
-[![GitHub Issues](https://img.shields.io/github/issues/roro2239/Stellar?style=flat-square&logo=github&logoColor=white&color=e74c3c)](https://github.com/roro2239/Stellar/issues)
-[![GitHub Release](https://img.shields.io/github/v/release/roro2239/Stellar?style=flat-square&logo=github&logoColor=white&color=28a745)](https://github.com/roro2239/Stellar/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/xiaoancute/Stellar?style=flat-square&logo=github&logoColor=white&color=181717&cacheSeconds=0)](https://github.com/xiaoancute/Stellar/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/xiaoancute/Stellar?style=flat-square&logo=github&logoColor=white&color=181717)](https://github.com/xiaoancute/Stellar/forks)
+[![GitHub Issues](https://img.shields.io/github/issues/xiaoancute/Stellar?style=flat-square&logo=github&logoColor=white&color=e74c3c)](https://github.com/xiaoancute/Stellar/issues)
+[![GitHub Release](https://img.shields.io/github/v/release/xiaoancute/Stellar?style=flat-square&logo=github&logoColor=white&color=28a745)](https://github.com/xiaoancute/Stellar/releases)
 
 ---
 官方交流群组：
@@ -37,6 +37,13 @@ Stellar 相比原版 Shizuku 进行了以下核心改进：
 - **服务伴随启动** - 应用可注册为 Stellar 服务的伴随进程，实现服务启动时自动唤醒
 - **双进程互守** - 可开启守护进程，Stellar 服务与守护进程相互监测异常关闭并重新启动
 
+### Termux 命令行集成
+
+- **特权命令执行** - Termux 可通过 `stsh` 在 Stellar 服务身份下执行 Android shell 命令
+- **服务端直连** - 命令桥接直接运行于 Stellar 特权服务进程，不依赖管理器 Activity、通知或前台服务常驻
+- **本地认证** - 仅监听设备回环地址，并使用随机令牌验证 Termux 客户端
+- **结果回传** - 支持命令参数、输出内容和退出状态返回
+
 ### 架构重构
 
 - **服务层重构** - 重新设计核心服务架构，优化模块间通信机制，提升整体性能与响应速度
@@ -56,7 +63,6 @@ Stellar 对用户界面进行了全面重构，带来更现代、更直观的使
 ## 与 Shizuku 的主要区别
 
 ### 移除的功能
-- **rish** - 移除 Shizuku 内置的 root shell 工具
 - **Sui** - 移除了 API 对 Zygisk-Sui 的支持
 
 ### 新增的功能
@@ -64,6 +70,7 @@ Stellar 对用户界面进行了全面重构，带来更现代、更直观的使
 - **细分权限系统** - 支持多种权限类型的精细化管理
 - **权限回调增强** - 支持一次性授权感知
 - **降权激活** - Root 启动后可降权到 Shell 用户运行，提高安全性
+- **Termux 命令行集成** - 使用 `stsh` 从 Termux 调用 Stellar 特权服务执行 Android 命令
 
 ### 重新启用的功能
 
@@ -78,6 +85,97 @@ Stellar 重新启用了 Shizuku 最新版本中已标记为弃用的功能：
 - 100% Kotlin 代码
 - 精简模块结构
 - 规范化命名
+
+## Termux 命令行集成
+
+Stellar 提供 `stsh` 命令，使 Termux 能够在 Stellar 特权服务进程中执行 Android 命令。该功能面向通用系统管理、调试和自动化场景，不依赖或限定于任何特定应用。
+
+### 权限模型
+
+`stsh` 创建的命令进程继承 Stellar 服务的运行身份：
+
+- 通过 ADB 启动 Stellar 时，命令通常以 `uid=2000(shell)` 和 `u:r:shell:s0` 执行
+- 通过 Root 启动且未启用降权时，命令将继承 Root 服务身份
+- 通过 Root 启动并启用「降权激活」时，命令以 Shell 身份执行
+
+因此，`stsh` 的实际能力由 Stellar 的启动方式、Android 版本、ROM 策略、SELinux 域和目标资源权限共同决定。Shell 身份不等同于 Root，也不能绕过 SELinux 强制访问控制。
+
+### 工作原理
+
+1. Stellar 服务在设备回环地址启动本地命令桥接
+2. 服务启动时生成随机认证令牌，并写入 Termux 的专属外部数据目录
+3. `stsh` 读取令牌并通过本地连接提交命令参数
+4. Stellar 服务创建子进程执行命令，并向 Termux 返回输出内容及退出状态
+
+桥接仅监听 `127.0.0.1`，不会向局域网或外部网络开放。认证令牌位于：
+
+```text
+/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token
+```
+
+### 安装
+
+1. 从 [Releases](https://github.com/xiaoancute/Stellar/releases) 安装支持 Termux 集成的 Stellar APK
+2. 启动 Stellar 特权服务
+3. 在 Termux 中安装 Python：
+
+```sh
+pkg install python
+```
+
+4. 下载 Release 附件中的 `stsh`，安装到 Termux：
+
+```sh
+install -m 755 stsh "$PREFIX/bin/stsh"
+```
+
+也可以在 Stellar 管理器的终端页面导出 APK 内置的 `stsh` 文件，再将其安装到 `$PREFIX/bin`。
+
+### 使用
+
+执行单条 Android shell 命令：
+
+```sh
+stsh -c "id"
+```
+
+执行系统设置查询：
+
+```sh
+stsh -c "settings get global adb_enabled"
+```
+
+访问 Shell 身份有权读取的文件或目录：
+
+```sh
+stsh -c "ls -la /storage/emulated/0/Android/data"
+```
+
+检查命令退出状态：
+
+```sh
+stsh -c "exit 37"
+echo "$?"
+```
+
+### 使用限制
+
+- 命令由 Android 的 `/system/bin/sh` 执行，不是在 Termux 的 Bash 环境中运行
+- 建议使用 `stsh -c "命令"` 执行非交互式任务
+- 当前桥接不转发标准输入，不适用于需要持续交互的终端程序
+- 命令输出会在进程结束后统一返回，不适合产生无限输出或超大输出的任务
+- Stellar 服务重启后会重新生成认证令牌，`stsh` 会自动读取新令牌
+- 能否访问某个应用目录或系统接口，取决于 Shell/Root 身份和设备安全策略，而不是目标应用类型
+
+### 真机验证
+
+当前版本已在 Android 16 设备上验证以下行为：
+
+- 返回 `uid=2000(shell)` 和 `u:r:shell:s0`
+- 连续多次命令调用正常完成
+- 可读取 Shell 身份有权访问的应用外部数据文件
+- 可创建、读取并删除临时文件
+- 标准输出、标准错误内容和非零退出状态可返回 Termux
 
 ## Shizuku 兼容层
 
@@ -154,6 +252,10 @@ su (root) → libchid.so 2000 → libstellar.so --apk=...
 
 > 详细步骤请查看 [API 集成指南](INTEGRATION_GUIDE.md)
 
+### 在 Termux 中使用
+
+如需从 Termux 执行 Android 特权命令，请参阅 [Termux 命令行集成](#termux-命令行集成)。
+
 ## 致谢与许可
 
 ### 致谢
@@ -181,8 +283,8 @@ su (root) → libchid.so 2000 → libstellar.so --apk=...
 
 ## 联系方式
 
-- GitHub Issues: [提交问题](https://github.com/RORO2239/Stellar/issues)
-- 项目主页: [RORO2239/Stellar](https://github.com/RORO2239/Stellar)
+- GitHub Issues: [提交问题](https://github.com/xiaoancute/Stellar/issues)
+- 项目主页: [xiaoancute/Stellar](https://github.com/xiaoancute/Stellar)
 
 ## 相关链接
 
