@@ -24,6 +24,7 @@ import roro.stellar.server.ktx.mainHandler
 import roro.stellar.server.monitor.PackageMonitor
 import roro.stellar.server.query.ApplicationQueryHelper
 import roro.stellar.server.service.StellarServiceCore
+import roro.stellar.server.shell.ServerShellBridge
 import roro.stellar.server.shizuku.ShizukuApiConstants
 import roro.stellar.server.shizuku.ShizukuCallbackFactory
 import roro.stellar.server.shizuku.ShizukuServiceIntercept
@@ -47,6 +48,8 @@ class StellarService : IStellarService.Stub() {
 
     @Volatile
     private var daemonPid: Int = -1
+
+    private var shellBridge: ServerShellBridge? = null
 
     init {
         try {
@@ -107,6 +110,12 @@ class StellarService : IStellarService.Stub() {
 
             LOGGER.i("注册 Binder...")
             register(this)
+
+            shellBridge = runCatching {
+                ServerShellBridge().also { it.start() }
+            }.onFailure {
+                LOGGER.w(it, "启动 stsh bridge 失败")
+            }.getOrNull()
 
             LOGGER.i("发送 Binder 到客户端...")
             mainHandler.post {
@@ -371,6 +380,7 @@ class StellarService : IStellarService.Stub() {
         permissionEnforcer.enforceManager(caller, "exit")
         LOGGER.i("exit")
         daemonPid = -1
+        shellBridge?.close()
         stopDaemon()
         exitProcess(0)
     }

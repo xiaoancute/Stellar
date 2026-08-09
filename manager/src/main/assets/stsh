@@ -1,5 +1,35 @@
 #!/system/bin/sh
 
+HOST="127.0.0.1"
+PORT="59521"
+TOKEN_FILE="/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token"
+RESPONSE="$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/stsh.XXXXXX")" || exit 1
+trap 'rm -f "$RESPONSE"' EXIT HUP INT TERM
+
+if [ -r "$TOKEN_FILE" ]; then
+    {
+        echo STSH1
+        /system/bin/toybox cat "$TOKEN_FILE"
+        echo
+        for argument in "$@"; do
+            printf '%s' "$argument" \
+                | /system/bin/toybox base64 \
+                | /system/bin/toybox tr -d '\n'
+            echo
+        done
+    } | /system/bin/toybox nc -w 2 -W 3600 "$HOST" "$PORT" \
+        > "$RESPONSE" 2>/dev/null
+fi
+
+STATUS_LINE="$(/system/bin/toybox head -n 1 "$RESPONSE")"
+case "$STATUS_LINE" in
+    STSH_STATUS=*)
+        STATUS="${STATUS_LINE#STSH_STATUS=}"
+        /system/bin/toybox tail -n +2 "$RESPONSE"
+        exit "$STATUS"
+        ;;
+esac
+
 MANAGER_PACKAGE="${STSH_MANAGER_APPLICATION_ID:-roro.stellar.manager}"
 APK="$(/system/bin/pm path "$MANAGER_PACKAGE" 2>/dev/null \
     | /system/bin/sed -n '1s/^package://p')"
