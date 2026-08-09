@@ -15,15 +15,19 @@ import android.os.ServiceManager;
 import android.system.Os;
 import android.text.TextUtils;
 
+import java.io.File;
 import java.util.Objects;
 
+import dalvik.system.BaseDexClassLoader;
 import rikka.hidden.compat.PackageManagerApis;
+import stub.dalvik.system.VMRuntimeHidden;
 
 public final class StellarShellLoader {
 
     private static final String ACTION_REQUEST_BINDER =
             "roro.stellar.intent.action.REQUEST_SHELL_BINDER";
     private static final long REQUEST_TIMEOUT_MILLIS = 15000;
+
     private static String[] args;
     private static String callingPackage;
     private static Handler handler;
@@ -32,16 +36,20 @@ public final class StellarShellLoader {
         @Override
         protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws RemoteException {
-            if (code == 1) {
-                IBinder binder = data.readStrongBinder();
-                if (binder != null) {
-                    handler.post(() -> onBinderReceived(binder));
-                } else {
-                    abort("Stellar service is not running");
-                }
+            if (code != 1) {
+                return super.onTransact(code, data, reply, flags);
+            }
+
+            IBinder binder = data.readStrongBinder();
+            String sourceDir = data.readString();
+            if (binder == null || TextUtils.isEmpty(sourceDir)) {
+                abort("Stellar service is not running");
                 return true;
             }
-            return super.onTransact(code, data, reply, flags);
+
+            handler.removeCallbacksAndMessages(null);
+            handler.post(() -> onBinderReceived(binder, sourceDir));
+            return true;
         }
     };
 
@@ -53,15 +61,11 @@ public final class StellarShellLoader {
         if (TextUtils.isEmpty(managerPackage)) {
             managerPackage = "roro.stellar.manager";
         }
+
         Intent intent = new Intent(ACTION_REQUEST_BINDER)
                 .setPackage(managerPackage)
                 .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-                .addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
                 .putExtra("data", data);
-        Bundle extras = intent.getExtras();
-        if (extras != null) {
-            extras.putBinder("binder", receiverBinder);
-        }
 
         IBinder activityBinder = ServiceManager.getService("activity");
         IActivityManager activityManager;
@@ -73,7 +77,7 @@ public final class StellarShellLoader {
 
         try {
             activityManager.broadcastIntent(null, intent, null, null, 0, null, null,
-                    null, -1, null, false, false, 0);
+                    null, -1, null, true, false, 0);
         } catch (Throwable error) {
             if ((Build.VERSION.SDK_INT != Build.VERSION_CODES.O
                     && Build.VERSION.SDK_INT != Build.VERSION_CODES.O_MR1)
@@ -95,9 +99,51 @@ public final class StellarShellLoader {
         }
     }
 
-    private static void onBinderReceived(IBinder binder) {
-        handler.removeCallbacksAndMessages(null);
-        StellarShell.main(args, callingPackage, binder, handler);
+    private static void onBinderReceived(IBinder binder, String sourceDir) {
+        File apk = new File(sourceDir);
+        File parent = apk.getParentFile();
+        if (parent == null) {
+            abort("Invalid Stellar APK path");
+            return;
+        }
+
+        String nativeLibraryPath = parent.getPath() + "/lib/"
+                + VMRuntimeHidden.getRuntime().vmInstructionSet();
+        String librarySearchPath = nativeLibraryPath;
+        String systemLibrarySearchPath = System.getProperty("java.library.path");
+        if (!TextUtils.isEmpty(systemLibrarySearchPath)) {
+            librarySearchPath += File.pathSeparatorChar + systemLibrarySearchPath;
+        }
+
+        try {
+            ClassLoader loaderClassLoader = StellarShellLoader.class.getClassLoader();
+            ClassLoader shellParent = loaderClassLoader == null
+                    ? null
+                    : loaderClassLoader.getParent();
+            BaseDexClassLoader classLoader = new BaseDexClassLoader(
+                    sourceDir,
+                    null,
+                    librarySearchPath,
+                    shellParent
+            );
+            Class<?> shellClass = classLoader.loadClass(
+                    "roro.stellar.manager.shell.StellarRishShell"
+            );
+            shellClass.getDeclaredMethod(
+                    "main",
+                    String[].class,
+                    String.class,
+                    IBinder.class,
+                    Handler.class,
+                    String.class
+            ).invoke(null, args, callingPackage, binder, handler, nativeLibraryPath);
+        } catch (ClassNotFoundException error) {
+            abort("Stellar shell classes are missing from the installed APK");
+        } catch (Throwable error) {
+            error.printStackTrace(System.err);
+            System.err.flush();
+            System.exit(1);
+        }
     }
 
     public static void main(String[] arguments) {
@@ -133,9 +179,8 @@ public final class StellarShellLoader {
             System.exit(1);
         }
 
-        final String packageForMessage = packageName;
         handler.postDelayed(
-                () -> abort("Request timed out for " + packageForMessage),
+                () -> abort("Request timed out for " + callingPackage),
                 REQUEST_TIMEOUT_MILLIS
         );
         Looper.loop();

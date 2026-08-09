@@ -150,7 +150,7 @@ class ShizukuServiceIntercept(
 
         if (code in 30000..30002) {
             enforceCallingPermission("rish")
-            return withClearedIdentity { rishService.onTransact(code, data, reply, flags) }
+            return rishService.onTransact(code, data, reply, flags)
         }
 
         return super.onTransact(code, data, reply, flags)

@@ -50,6 +50,10 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
             COMMAND ${CMAKE_STRIP} --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libchid.so")
 endif ()
 
-add_library(rish SHARED rish.cpp)
+add_library(rish SHARED
+        rish.cpp
+        pts.cpp
+        rikka_rish_RishHost.cpp
+        rikka_rish_RishTerminal.cpp)
 
 target_link_libraries(rish log cxx::cxx)

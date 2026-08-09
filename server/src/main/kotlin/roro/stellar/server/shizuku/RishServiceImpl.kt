@@ -7,6 +7,7 @@ import android.system.Os
 import rikka.rish.RishConfig
 import rikka.rish.RishConstants
 import rikka.rish.RishHost
+import roro.stellar.server.bootstrap.ServerBootstrap
 import java.util.concurrent.ConcurrentHashMap
 
 class RishServiceImpl {
@@ -15,6 +16,9 @@ class RishServiceImpl {
     private val isRoot = Os.getuid() == 0
 
     init {
+        ServerBootstrap.managerApplicationInfo?.nativeLibraryDir?.let {
+            RishConfig.setLibraryPath(it)
+        }
         RishConfig.init(ShizukuApiConstants.BINDER_DESCRIPTOR, 30000)
     }
 
@@ -48,7 +52,7 @@ class RishServiceImpl {
             }
             RishConfig.getTransactionCode(RishConfig.TRANSACTION_getExitCode) -> {
                 data.enforceInterface(RishConfig.getInterfaceToken())
-                val exitCode = hosts[Binder.getCallingPid()]?.exitCode ?: -1
+                val exitCode = hosts.remove(Binder.getCallingPid())?.exitCode ?: -1
                 reply?.writeNoException()
                 reply?.writeInt(exitCode)
                 true

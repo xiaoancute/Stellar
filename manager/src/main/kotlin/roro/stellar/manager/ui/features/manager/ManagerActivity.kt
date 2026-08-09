@@ -1,33 +1,19 @@
 package roro.stellar.manager.ui.features.manager
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import roro.stellar.manager.service.ShellBridgeService
 import roro.stellar.manager.ui.theme.StellarTheme
 import roro.stellar.manager.ui.theme.ThemePreferences
 
 class ManagerActivity : ComponentActivity() {
-
-    private var notificationPermissionRequested = false
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {
-        startShellBridge()
-    }
 
     companion object {
         private const val EXTRA_ROUTE = "route"
@@ -84,27 +70,6 @@ class ManagerActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            != PackageManager.PERMISSION_GRANTED &&
-            !notificationPermissionRequested
-        ) {
-            notificationPermissionRequested = true
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            startShellBridge()
-        }
-    }
-
-    private fun startShellBridge() {
-        try {
-            ShellBridgeService.start(this)
-        } catch (error: Throwable) {
-            Toast.makeText(this, "stsh: ${error.message}", Toast.LENGTH_LONG).show()
-        }
-    }
 }
 
 @Composable

@@ -6,11 +6,13 @@ import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.Parcel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import roro.stellar.Stellar
+import roro.stellar.StellarApiConstants
 
 class StellarReceiver : BroadcastReceiver() {
 
@@ -33,12 +35,10 @@ class StellarReceiver : BroadcastReceiver() {
     }
 
     private fun replyWithBinder(context: Context, intent: Intent) {
-        val callback = intent.extras?.getBinder(EXTRA_CALLBACK)
-            ?: intent.getBundleExtra(EXTRA_DATA)?.getBinder(EXTRA_CALLBACK)
-            ?: return
-        val binder = Stellar.binder
-        if (binder != null && binder.pingBinder()) {
-            sendReply(callback, binder)
+        val callback = intent.getBundleExtra(EXTRA_DATA)?.getBinder(EXTRA_CALLBACK) ?: return
+        val binder = runCatching { requestShizukuBinder() }.getOrNull()
+        if (binder != null) {
+            sendReply(context, callback, binder)
             return
         }
 
@@ -52,23 +52,43 @@ class StellarReceiver : BroadcastReceiver() {
             handler.removeCallbacksAndMessages(null)
             Stellar.removeBinderReceivedListener(listener)
             try {
-                sendReply(callback, replyBinder)
+                sendReply(context, callback, replyBinder)
             } finally {
                 pending.finish()
             }
         }
 
         listener = Stellar.OnBinderReceivedListener {
-            complete(Stellar.binder?.takeIf { it.pingBinder() })
+            complete(runCatching { requestShizukuBinder() }.getOrNull())
         }
         Stellar.addBinderReceivedListener(listener, handler)
-        handler.postDelayed({ complete(Stellar.binder?.takeIf { it.pingBinder() }) }, 8_000)
+        handler.postDelayed({
+            complete(runCatching { requestShizukuBinder() }.getOrNull())
+        }, BINDER_WAIT_TIMEOUT_MILLIS)
     }
 
-    private fun sendReply(callback: IBinder, binder: IBinder?) {
-        val data = android.os.Parcel.obtain()
+    private fun requestShizukuBinder(): IBinder? {
+        val stellarBinder = Stellar.binder?.takeIf { it.pingBinder() } ?: return null
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            data.writeInterfaceToken(StellarApiConstants.BINDER_DESCRIPTOR)
+            if (!stellarBinder.transact(BINDER_TRANSACTION_GET_SHIZUKU_SERVICE, data, reply, 0)) {
+                return null
+            }
+            reply.readException()
+            reply.readStrongBinder()
+        } finally {
+            reply.recycle()
+            data.recycle()
+        }
+    }
+
+    private fun sendReply(context: Context, callback: IBinder, binder: IBinder?) {
+        val data = Parcel.obtain()
         try {
             data.writeStrongBinder(binder)
+            data.writeString(context.applicationInfo.sourceDir)
             callback.transact(1, data, null, IBinder.FLAG_ONEWAY)
         } finally {
             data.recycle()
@@ -80,5 +100,7 @@ class StellarReceiver : BroadcastReceiver() {
             "roro.stellar.intent.action.REQUEST_SHELL_BINDER"
         private const val EXTRA_DATA = "data"
         private const val EXTRA_CALLBACK = "binder"
+        private const val BINDER_TRANSACTION_GET_SHIZUKU_SERVICE = 405
+        private const val BINDER_WAIT_TIMEOUT_MILLIS = 8_000L
     }
 }

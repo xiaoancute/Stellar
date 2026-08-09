@@ -2,6 +2,7 @@
 #define _LOGGING_H
 
 #include <errno.h>
+#include <string.h>
 #include "android/log.h"
 
 #ifndef LOG_TAG

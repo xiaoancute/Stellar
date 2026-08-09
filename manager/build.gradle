@@ -155,6 +155,7 @@ dependencies {
     implementation project(':server')
     implementation project(':api')
     implementation project(':provider')
+    implementation project(':shizuku-api')
 
     implementation libs.hidden.compat
     compileOnly libs.hidden.stub

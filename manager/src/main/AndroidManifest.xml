@@ -27,7 +27,6 @@
         android:required="false" />
 
     <queries>
-        <package android:name="com.termux" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
@@ -118,16 +117,6 @@
             android:name=".startup.service.SelfStarterService"
             android:enabled="true"
             android:exported="false" />
-
-        <service
-            android:name=".service.ShellBridgeService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps the Stellar Binder available for the stsh terminal bridge" />
-        </service>
 
         <service
             android:name=".service.StellarAccessibilityService"

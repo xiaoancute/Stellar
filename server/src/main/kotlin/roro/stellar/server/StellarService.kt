@@ -483,6 +483,13 @@ class StellarService : IStellarService.Stub() {
             data.enforceInterface(StellarApiConstants.BINDER_DESCRIPTOR)
             transactRemote(data, reply, flags)
             return true
+        } else if (code == BINDER_TRANSACTION_GET_SHIZUKU_SERVICE) {
+            data.enforceInterface(StellarApiConstants.BINDER_DESCRIPTOR)
+            val caller = CallerContext.fromBinder()
+            permissionEnforcer.enforceManager(caller, "getShizukuService")
+            reply?.writeNoException()
+            reply?.writeStrongBinder(shizukuServiceIntercept.asBinder())
+            return true
         }
         return super.onTransact(code, data, reply, flags)
     }
@@ -582,6 +589,7 @@ class StellarService : IStellarService.Stub() {
     }
 
     companion object {
+        private const val BINDER_TRANSACTION_GET_SHIZUKU_SERVICE = 405
         private val LOGGER = Logger("StellarService")
 
         @JvmStatic
