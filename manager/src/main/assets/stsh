@@ -3,6 +3,19 @@
 TOKEN_FILE="/storage/emulated/0/Android/data/com.termux/files/.stellar-stsh-token"
 PYTHON="${PREFIX:-/data/data/com.termux/files/usr}/bin/python"
 
+# Run a command directly by default. Use `-c` for shell syntax such as pipes,
+# variables, and command chaining; keep `exec` as an explicit alias.
+case "${1:-}" in
+    ""|exec|-*) ;;
+    --)
+        shift
+        set -- exec "$@"
+        ;;
+    *)
+        set -- exec "$@"
+        ;;
+esac
+
 if [ -x "$PYTHON" ] && [ -r "$TOKEN_FILE" ]; then
     exec "$PYTHON" - "$@" <<'PY'
 import base64

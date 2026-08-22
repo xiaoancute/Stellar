@@ -76,36 +76,33 @@ Stellar 特权服务在设备回环地址启动本地命令桥接。桥接不会
 - 已安装本仓库发布的 Stellar APK
 - Stellar 特权服务已成功启动
 - Termux 包名为 `com.termux`
-- Termux 已安装 Python
-
-在 Termux 中安装 Python：
-
-```sh
-pkg install python
-```
 
 ### 安装 `stsh`
 
-从 [Releases](https://github.com/xiaoancute/Stellar/releases) 下载 `stsh`，然后执行：
+在 Termux 中执行下面的命令即可安装最新 `stsh`：
 
 ```sh
-install -m 755 stsh "$PREFIX/bin/stsh"
+pkg install -y curl
+curl -fsSL https://github.com/xiaoancute/Stellar/releases/latest/download/stsh \
+  -o "$PREFIX/bin/stsh"
+chmod 700 "$PREFIX/bin/stsh"
 ```
 
-也可以在 Stellar 管理器的终端页面导出 APK 内置的 `stsh` 文件，再将其安装到 `$PREFIX/bin`。
+也可以在 Stellar 管理器的终端页面导出 APK 内置的 `stsh` 文件，再复制到 `$PREFIX/bin`。
 
 ### 基本使用
 
 查看命令身份：
 
 ```sh
+stsh id
 stsh -c "id; id -Z"
 ```
 
 查询 Android 系统设置：
 
 ```sh
-stsh -c "settings get global adb_enabled"
+stsh settings get global adb_enabled
 ```
 
 调用 Package Manager：
@@ -117,7 +114,7 @@ stsh -c "pm list packages | head"
 访问服务身份有权读取的目录：
 
 ```sh
-stsh -c "ls -la /storage/emulated/0/Android/data"
+stsh ls -la /storage/emulated/0/Android/data
 ```
 
 获取退出状态：
@@ -130,7 +127,7 @@ echo "$?"
 ### 当前限制
 
 - 命令由 Android 的 `/system/bin/sh` 执行，不是在 Termux 的 Bash 环境中运行
-- 当前接口面向 `stsh -c "命令"` 形式的非交互式任务
+- 直接命令使用 `stsh 命令 参数...`；管道、变量和多条命令使用 `stsh -c "命令"`
 - 标准输入不会转发到远端子进程
 - 输出会在命令结束后统一返回，不适合无限输出或超大输出任务
 - 标准输出和标准错误内容会返回到 Termux，但当前桥接不保持两个流的独立顺序

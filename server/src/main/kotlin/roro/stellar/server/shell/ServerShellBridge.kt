@@ -70,7 +70,13 @@ class ServerShellBridge : Closeable {
                 val args = lines.drop(2).map {
                     String(Base64.decode(it, Base64.DEFAULT), Charsets.UTF_8)
                 }
-                val process = ProcessBuilder(listOf("/system/bin/sh") + args).start()
+                val process = if (args.firstOrNull() == "exec") {
+                    val command = args.drop(1)
+                    check(command.isNotEmpty()) { "Missing command" }
+                    ProcessBuilder(command).start()
+                } else {
+                    ProcessBuilder(listOf("/system/bin/sh") + args).start()
+                }
                 process.outputStream.close()
 
                 val buffer = ByteArrayOutputStream()

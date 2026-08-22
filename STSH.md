@@ -14,25 +14,34 @@ Run the `Manager CI` workflow or push to the fork's `main` branch. The
 
 ## Install in Termux
 
-Install the modified Stellar APK first, start its privileged service, then place the
-exported script in Termux:
+Install the modified Stellar APK first and start its privileged service. Then install the
+latest launcher directly from Termux:
 
 ```sh
-cp stsh "$PREFIX/bin/"
+pkg install -y curl
+curl -fsSL https://github.com/xiaoancute/Stellar/releases/latest/download/stsh \
+  -o "$PREFIX/bin/stsh"
 chmod 700 "$PREFIX/bin/stsh"
 ```
 
-The script locates the installed Stellar APK with Android's package manager and loads
-the embedded shell client directly from that read-only APK.
+The script locates the installed Stellar APK with Android's package manager and loads the
+embedded shell client directly from that read-only APK. Python is optional: it is used for
+the local bridge when available, while the app-process fallback works without it.
 
 The first invocation asks Stellar to authorize Termux:
+
+```sh
+stsh id
+stsh ls -la /storage/emulated/0/Android/data
+```
+
+Use `-c` for shell syntax:
 
 ```sh
 stsh -c 'id; ls -la /storage/emulated/0/Android/data'
 ```
 
-Use `exec` to run a command directly instead of wrapping arguments with Android's
-system shell:
+Direct execution is also available explicitly with `exec`:
 
 ```sh
 stsh exec /system/bin/id
